@@ -49,13 +49,13 @@
 
         .back-button {
             position: absolute;
-            top: 40px;
-            left: 0;
-            padding: 8px 16px;
+            top: 10px;
+            left: 10px;
+            padding: 10px 20px;
             border: none;
-            border-radius: 12px;
-            background: #e0e0e0;
-            color: var(--color-text);
+            border-radius: 15px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
             font-size: 1rem;
             cursor: pointer;
             transition: all 0.3s;
@@ -63,11 +63,84 @@
             display: flex;
             align-items: center;
             gap: 8px;
+            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.2);
         }
 
         .back-button:hover {
-            background: #d0d0d0;
             transform: translateY(-2px);
+            box-shadow: 0 6px 15px rgba(0, 0, 0, 0.3);
+        }
+
+        .login-screen {
+            text-align: center;
+        }
+
+        .login-screen h2 {
+            color: var(--color-primary);
+            font-size: 2rem;
+            margin-bottom: 20px;
+        }
+
+        .login-form {
+            max-width: 400px;
+            margin: 0 auto;
+        }
+
+        .form-group {
+            margin-bottom: 20px;
+            text-align: left;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 8px;
+            color: var(--color-text);
+            font-weight: bold;
+        }
+
+        .form-group input {
+            width: 100%;
+            padding: 12px;
+            border: 2px solid #e0e0e0;
+            border-radius: 10px;
+            font-size: 1rem;
+            transition: border-color 0.3s;
+        }
+
+        .form-group input:focus {
+            outline: none;
+            border-color: var(--color-primary);
+        }
+
+        .user-info {
+            text-align: center;
+            margin-bottom: 15px;
+            padding: 10px;
+            background: rgba(255, 255, 255, 0.9);
+            border-radius: 15px;
+        }
+
+        .user-info p {
+            margin: 5px 0;
+            color: var(--color-text);
+            font-size: 0.9rem;
+        }
+
+        .logout-btn {
+            padding: 8px 16px;
+            border: none;
+            border-radius: 10px;
+            background: #ff5252;
+            color: white;
+            font-size: 0.9rem;
+            cursor: pointer;
+            transition: all 0.3s;
+            font-weight: bold;
+            margin-top: 5px;
+        }
+
+        .logout-btn:hover {
+            background: #ff3838;
         }
 
         .header h1 {
@@ -551,8 +624,47 @@
         let currentLetter = '';
         let currentWord = '';
         let wordShown = false;
+        let answerLocked = false;
         let dButton = null;
         let bButton = null;
+        function addWrongWord(word, letter) {
+            const key = currentLevel;
+            if (!wrongWords[key]) {
+                wrongWords[key] = [];
+            }
+            if (!wrongWords[key].includes(word)) {
+                wrongWords[key].push(word);
+            }
+            saveUserData();
+        }
+
+        function removeWrongWord(word) {
+            const key = currentLevel;
+            if (wrongWords[key]) {
+                wrongWords[key] = wrongWords[key].filter(w => w !== word);
+                saveUserData();
+            }
+        }
+
+        function getWordForRound() {
+            const config = levelConfigs[currentLevel];
+            const letters = config.letters;
+            const randomChoice = letters[Math.floor(Math.random() * letters.length)];
+            currentLetter = randomChoice;
+            
+            let wordList;
+            if (currentLevel === 'bd') {
+                wordList = randomChoice === 'b' ? wordsWithB : wordsWithD;
+            } else if (currentLevel === 'pq') {
+                wordList = randomChoice === 'p' ? wordsWithP : wordsWithQ;
+            } else if (currentLevel === 'mn') {
+                wordList = randomChoice === 'm' ? wordsWithM : wordsWithN;
+            } else if (currentLevel === 'ei-ie') {
+                wordList = randomChoice === 'ei' ? wordsWithEi : wordsWithIe;
+            }
+            
+            return wordList[Math.floor(Math.random() * wordList.length)];
+        }
 
         function selectLevel(level) {
             currentLevel = level;
@@ -591,24 +703,9 @@
             document.getElementById('feedback').className = 'feedback';
             document.getElementById('answerButtons').innerHTML = '';
             wordShown = false;
+            answerLocked = false;
 
-            // Wort-Modus für alle Level
-            const letters = config.letters;
-            const randomChoice = letters[Math.floor(Math.random() * letters.length)];
-            currentLetter = randomChoice;
-            
-            let wordList;
-            if (currentLevel === 'bd') {
-                wordList = randomChoice === 'b' ? wordsWithB : wordsWithD;
-            } else if (currentLevel === 'pq') {
-                wordList = randomChoice === 'p' ? wordsWithP : wordsWithQ;
-            } else if (currentLevel === 'mn') {
-                wordList = randomChoice === 'm' ? wordsWithM : wordsWithN;
-            } else if (currentLevel === 'ei-ie') {
-                wordList = randomChoice === 'ei' ? wordsWithEi : wordsWithIe;
-            }
-            
-            currentWord = wordList[Math.floor(Math.random() * wordList.length)];
+            currentWord = getWordForRound();
             
             const wordDisplay = document.getElementById('wordDisplay');
             const instruction = document.getElementById('instruction');
@@ -672,10 +769,11 @@
         }
 
         function checkAnswer(selectedLetter) {
-            if (!wordShown) {
-                return; // Warte bis das Wort ausgeblendet wurde
+            if (!wordShown || answerLocked) {
+                return; // Warte bis das Wort ausgeblendet wurde oder Antwort bereits gegeben
             }
 
+            answerLocked = true;
             totalAnswers++;
             const feedbackEl = document.getElementById('feedback');
             const isCorrect = selectedLetter === currentLetter;
